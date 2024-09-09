@@ -2,14 +2,14 @@ var VERSION = "0.0.7";
 var showVersionChanges = false;
 
 var sessions;
-var activeSession;		//Which profile is in use? Points to the array location of sessions
-var backupData;                 //Contains all undo actions {id,type,date,data}
-var refreshSettings;            //Values: "0"-No Update / "1"-Update Current Tab / "2"-Update all tabs in current window / "3"-Update all tabs of all windows
-var showProfileNumber           //True: shows in the browser's icon a number representing the active profile
+var activeSession;
+var backupData;
+var refreshSettings;
+var showProfileNumber;
 var showProfileChooser;
-var integrateETC;		//Boolean - Integrate with the extension 'Edit This Cookie'?
+var integrateETC;
 var isInstalledETC;
-var activateShortcuts;          //Boolean - Shortcuts are enabled? (It comprehends js injection)
+var activateShortcuts;
 var justUpdated;
 var firstRun;
 var installDate;
@@ -19,139 +19,115 @@ var swapMyCookiesID = "dffhipnliikkblkhpjapbecpmoilcama";
 var forgetMeID = "gekpdemielcmiiiackmeoppdgaggjgda";
 
 var ls = {
-    set : function(name, value) {
-        var toReturn = this.get(name);
-        localStorage.setItem(name, JSON.stringify(value));
-        return toReturn;
+    set: function(name, value) {
+        return new Promise((resolve) => {
+            chrome.storage.local.set({ [name]: value }, function() {
+                resolve(value);
+            });
+        });
     },
-    get : function(name) {
-        var toReturn;
-        try {
-            toReturn = JSON.parse(localStorage.getItem(name));
-        } catch(e) {
-            toreturn = null;
-        }
-        return toReturn;
+    get: function(name) {
+        return new Promise((resolve) => {
+            chrome.storage.local.get([name], function(result) {
+                resolve(result[name] || null);
+            });
+        });
     },
-    remove : function(name) {
-        var toReturn = this.get(name);
-        localStorage.removeItem(name);
-        return toReturn;
+    remove: function(name) {
+        return new Promise((resolve) => {
+            chrome.storage.local.remove([name], function() {
+                resolve();
+            });
+        });
     }
-}
+};
 
-var updateData = function() {
-    sessions = ls.get("data_sessions");
-    //sessions = null;
-    if(sessions == null || sessions == undefined) {
-        sessions = new Array();
-        sessions[0] = {
-            "name":"New Profile #0",
-            "cookies":new Array(),
-            "created":new Date(),
-            "lastUsed": undefined
-        };
-        sessions[1] = {
-            "name":"New Profile #1",
-            "cookies":new Array(),
-            "created":new Date(),
-            "lastUsed": undefined
-        };
-        sessions[2] = {
-            "name":"New Profile #2",
-            "cookies":new Array(),
-            "created":new Date(),
-            "lastUsed": undefined
-        };
-    } else if(sessions.length == 0) {
-        sessions = new Array();
-        sessions[0] = {
-            "name":"New Profile #0",
-            "cookies":new Array(),
-            "created":new Date(),
-            "lastUsed": undefined
-        };
+var updateData = async function() {
+    sessions = await ls.get("data_sessions");
+    
+    if (!sessions || sessions.length === 0) {
+        sessions = [
+            {
+                "name": "New Profile #0",
+                "cookies": [],
+                "created": new Date(),
+                "lastUsed": undefined
+            },
+            {
+                "name": "New Profile #1",
+                "cookies": [],
+                "created": new Date(),
+                "lastUsed": undefined
+            },
+            {
+                "name": "New Profile #2",
+                "cookies": [],
+                "created": new Date(),
+                "lastUsed": undefined
+            }
+        ];
     }
 
-    activeSession = ls.get("data_activeSession");
-    if(activeSession == null || activeSession >= sessions.length || activeSession < 0 || activeSession == undefined) {
+    activeSession = await ls.get("data_activeSession");
+    if (activeSession == null || activeSession >= sessions.length || activeSession < 0) {
         activeSession = 0;
-    }	
+    }
     sessions[activeSession].lastUsed = new Date();
 
-    backupData = ls.get("data_backupData");
-    if(backupData == null || backupData == undefined) {
-        backupData = new Array();
+    backupData = await ls.get("data_backupData");
+    if (!backupData) {
+        backupData = [];
     }
 
-    refreshSettings = ls.get("options_refreshSettings");
-    if(refreshSettings == null || refreshSettings == undefined) {
+    refreshSettings = await ls.get("options_refreshSettings");
+    if (refreshSettings == null) {
         refreshSettings = 2;
     }
 
-    showProfileNumber = ls.get("options_showProfileNumber");
-    if(showProfileNumber == null || showProfileNumber == undefined) {
+    showProfileNumber = await ls.get("options_showProfileNumber");
+    if (showProfileNumber == null) {
         showProfileNumber = true;
     }
 
-    showProfileChooser = ls.get("options_showProfileChooser");
-    if(showProfileChooser == null || showProfileChooser == undefined) {
+    showProfileChooser = await ls.get("options_showProfileChooser");
+    if (showProfileChooser == null) {
         showProfileChooser = false;
     }
 
-    activateShortcuts = ls.get("options_activateShortcuts");
-    if(activateShortcuts == null || activateShortcuts == undefined) {
+    activateShortcuts = await ls.get("options_activateShortcuts");
+    if (activateShortcuts == null) {
         activateShortcuts = false;
     }
-	
-    integrateETC = ls.get("options_integrateETC");
-    if(integrateETC == null || integrateETC == undefined) {
+
+    integrateETC = await ls.get("options_integrateETC");
+    if (integrateETC == null) {
         integrateETC = true;
     }
 
-    isInstalledETC = ls.get("status_isInstalledETC");
-    if(isInstalledETC == null || isInstalledETC == undefined) {
+    isInstalledETC = await ls.get("status_isInstalledETC");
+    if (isInstalledETC == null) {
         isInstalledETC = false;
     }
-    
-    installDate = ls.get("data_installDate");
-    if(installDate == null) {
+
+    installDate = await ls.get("data_installDate");
+    if (!installDate) {
         installDate = new Date();
-        ls.set("data_installDate", installDate);
+        await ls.set("data_installDate", installDate);
     }
 
-    var oldVersion = ls.get("status_version");
-    firstRun = ls.get("status_firstRun");
-    if(firstRun == null)
-        firstRun = true;
-    else
-        firstRun = false;
-    if(oldVersion == VERSION)
-        justUpdated = false;
-    else
-        justUpdated = true;
+    var oldVersion = await ls.get("status_version");
+    firstRun = await ls.get("status_firstRun") === null;
 
-    setTimeout ( function() {
-        ls.set("data_sessions", sessions);
-        ls.set("data_activeSession", activeSession);
-        ls.set("data_backupData",backupData);
-        ls.set("options_refreshSettings", refreshSettings);
-        ls.set("options_showProfileNumber", showProfileNumber);
-        ls.set("options_showProfileChooser", showProfileChooser);
-        ls.set("options_activateShortcuts", activateShortcuts);
-        ls.set("options_integrateETC", integrateETC);
-        ls.set("status_version", VERSION);
-        ls.set("data_installDate", installDate);
-        ls.set("status_firstRun", false);
-    },1,sessions,activeSession,refreshSettings,showProfileNumber,activateShortcuts,integrateETC,VERSION,installDate);
+    justUpdated = (oldVersion !== VERSION);
 
+    await ls.set("data_sessions", sessions);
+    await ls.set("data_activeSession", activeSession);
+    await ls.set("data_backupData", backupData);
+    await ls.set("options_refreshSettings", refreshSettings);
+    await ls.set("options_showProfileNumber", showProfileNumber);
+    await ls.set("options_showProfileChooser", showProfileChooser);
+    await ls.set("options_activateShortcuts", activateShortcuts);
+    await ls.set("options_integrateETC", integrateETC);
+    await ls.set("status_version", VERSION);
+    await ls.set("status_firstRun", false);
 };
-updateData();
-
-function triggerUpdateData() {
-    var tabs = chrome.extension.getViews();
-    for(var i=0; i<tabs.length; i++){
-        if (tabs[i].updateData)
-            tabs[i].updateData();
-    }
-}
