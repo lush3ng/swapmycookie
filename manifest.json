@@ -1,39 +1,36 @@
 {
-    "manifest_version": 3,
-    "name": "Swap My Cookies by Creator",
-    "version": "0.5",
-    "description": "If you have multiple accounts, let Hack Swap My Cookies manage them for you!",
-    "icons": {
-        "32": "img/icon_32x32.png",
-        "48": "img/icon_48x48.png",
-        "128": "img/icon_128x128.png"
-    },
-    "action": {
-        "default_icon": "img/icon_32x32.png",
-        "default_title": "Swap My Cookies by Creator",
-        "default_popup": "popup.html"
-    },
-    "background": {
-        "service_worker": "js/service-worker.js"
-    },
-    "options_page": "options.html",
-    "permissions": [
-        "activeTab",
-        "storage",
-        "cookies",
-        "<all_urls>",
-        "webRequest",
-        "webRequestBlocking"
-    ],
-    "content_scripts": [
-        {
-            "matches": ["<all_urls>"],
-            "js": ["js/data.js", "js/tools.js"]
-        }
-    ],
-    "content_security_policy": {
-        "extension_pages": "script-src 'self'; object-src 'self'"
-    },
-    "minimum_chrome_version": "102",
-    "update_url": "http://clients2.google.com/service/update2/crx"
+	"name": "Hack Swap My Cookies",
+	"version": "0.3",
+	
+	"description": "If you have multiple accounts let Hack Swap My Cookies manage them for you!",
+	"icons": {
+		"32": "img/icon_32x32.png",
+		"48": "img/icon_48x48.png",
+		"128": "img/icon_128x128.png"
+	},
+	
+	"browser_action": {
+		"default_icon": "img/icon_32x32.png",
+		"default_title": "Hack Swap My Cookies",
+		"default_popup": "popup.html"
+	},
+	
+	"background": {
+		"scripts" : ["/lib/jquery-1.4.2.min.js", "/js/data.js", "/js/tools.js", "/js/background.js"]
+	},
+	
+	"options_page": "options.html",
+	
+	"permissions": [ 
+		"tabs",
+		"\u003Call_urls\u003E",
+		"unlimitedStorage",
+		"cookies" 
+	],
+	
+	"content_security_policy": "script-src 'self' https://ssl.google-analytics.com; object-src 'self'",
+	
+	"minimum_chrome_version": "12",
+	"manifest_version": 2,
+	"update_url": "http://clients2.google.com/service/update2/crx"
 }
